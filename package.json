@@ -1,0 +1,41 @@
+{
+  "name": "ccwtpf",
+  "version": "0.0.1",
+  "description": "WebTransport implementation to fallback to WebSocket if browser does not support it",
+  "keywords": [
+    "webtransport",
+    "websocket",
+    "polyfill"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "./package.json"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.global.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "repository": "github.com:yomorun/webtransport-polyfill",
+  "bugs": {
+    "url": "https://github.com/yomorun/webtransport-polyfill/issues"
+  },
+  "homepage": "https://github.com/yomorun/webtransport-polyfill#readme",
+  "scripts": {
+    "test": "bun test",
+    "build": "bun build --sourcemap ./src/index.ts --target browser --outdir ./out",
+    "generate-types": "bunx tsc --allowJs --declaration --emitDeclarationOnly --declarationMap ./out/index.js",
+    "dist": "bun build --minify-whitespace ./src/index.ts --target browser --outdir ./dist"
+  },
+  "devDependencies": {
+    "bun-types": "^1.0.1",
+    "typescript": "^5.2.2"
+  }
+}
