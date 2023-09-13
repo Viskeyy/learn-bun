@@ -9,17 +9,17 @@
   ],
   "type": "module",
   "license": "MIT",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "module": "./out/index.js",
+  "types": "./out/index.d.ts",
   "files": [
-    "dist",
-    "./package.json"
+    "out/index.js",
+    "out/index.d.ts",
+    "out/index.d.ts.map"
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.global.js",
-      "types": "./dist/index.d.ts"
+      "import": "./out/index.js",
+      "types": "./out/index.d.ts"
     },
     "./package.json": "./package.json"
   },
@@ -32,7 +32,7 @@
     "test": "bun test",
     "build": "bun build --sourcemap ./src/index.ts --target browser --outdir ./out",
     "generate-types": "bunx tsc --allowJs --declaration --emitDeclarationOnly --declarationMap ./out/index.js",
-    "dist": "bun build --minify-whitespace ./src/index.ts --target browser --outdir ./dist"
+    "dist": "bun run build && bun run generate-types"
   },
   "devDependencies": {
     "bun-types": "^1.0.1",
