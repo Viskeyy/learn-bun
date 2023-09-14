@@ -1,8 +1,8 @@
 // import "regenerator-runtime/runtime.js";
-import { Datagrams } from "./Datagrams";
-import { WebTransportCloseInfo } from "./CloseInfo";
-import { ServerInitiatedStreams } from "./ServerInitiatedStreams";
 import { BidirectionalStream } from "./BidirectionalStream";
+import { WebTransportCloseInfo } from "./CloseInfo";
+import { Datagrams } from "./Datagrams";
+import { ServerInitiatedStreams } from "./ServerInitiatedStreams";
 import { UnidirectionalStream } from "./UnidirectionalStream";
 
 declare global {
@@ -22,11 +22,18 @@ export class WebTransportPolyfill {
   public incomingUnidirectionalStreams: ServerInitiatedStreams =
     new ServerInitiatedStreams();
   #ws: WebSocket | null = null;
+  #url: string
+  #reconnect: Boolean = false;
+  // the instance id of WebSocket
+  #sid: number = 0;
   #connErr: any;
 
   // https://www.w3.org/TR/webtransport/#webtransport-constructor
   // constructor(USVString url, optional WebTransportOptions options = {});
-  constructor(_url: string) {
+  constructor(_url: string, options?: any) {
+    if (options) {
+      this.#reconnect = options.reconnect || false;
+    }
     let url: URL;
     try {
       url = new URL(_url);
@@ -46,14 +53,68 @@ export class WebTransportPolyfill {
 
     // change `https` to `wss`
     url.protocol = "wss";
-    let parsedUrl = url.toString();
+    // let parsedUrl = url.toString();
 
-    this.#ws = new WebSocket(parsedUrl);
-    this.#ws.binaryType = "arraybuffer";
+    this.#url = url.toString();
+    this.#connect();
 
+    // reconnect
+    // this.#ws.addEventListener("close", (e) => {
+    //   console.debug("CCCC-onclose, start reconnect", { e });
+    //   this.#connect();
+    //   this.#init();
+    // })
+    // this.#ws = new WebSocket(this.#url);
+    // this.#ws.binaryType = "arraybuffer";
+
+    // this.#init();
+  }
+
+  #connect() {
+    this.#ws = null;
+    const ws = new WebSocket(this.#url);
+    this.#sid++
+    Object.assign(ws, { sid: this.#sid })
+    ws.binaryType = "arraybuffer";
+    // onopen
+    ws.addEventListener("open", (e) => {
+      console.debug(`[${this.#sid}] XXXXXXXXXXX open`);
+    });
+    // define reconnect handler
+    const reconnectHandler = (closeEvent) => {
+      console.debug(`[${this.#sid}]++++++++++onclose [code=${closeEvent.code}, reason=${closeEvent.reason}]`);
+      if (closeEvent.code < 2000) {
+        // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4
+        // 1006: is a reserved value and MUST NOT be set as a status code in a Close control frame by an endpoint. It is designated for use in applications expecting a status code to indicate that the connection was closed abnormally, e.g., without sending or receiving a Close control frame.
+        ws.removeEventListener("close", reconnectHandler)
+        console.debug(`[${this.#sid}]>>reconnect=${this.#reconnect} [code=${closeEvent.code}, reason=${closeEvent.reason}]`);
+        if (this.#reconnect) {
+          this.#connect();
+        }
+      } else {
+        console.debug(`[${this.#sid}]DO NOT reconnect because of error code`);
+      }
+    };
+    // reconnect
+    if (this.#reconnect) {
+      ws.addEventListener("close", reconnectHandler)
+    }
+    this.#ws = ws;
+    console.log(`[${this.#sid}]CC-created a new WebSocket`)
+    // remove `onclose` reconnect handler before page unload, this makes developers feels good when debugging their
+    // web apps with F5/refresh page.
+    globalThis.window.addEventListener('beforeunload', () => {
+      console.debug(`[${this.#sid}]beforeunload, purge listeners`)
+      ws.removeEventListener("close", reconnectHandler)
+    });
+    this.#init()
+  }
+
+  #init() {
     console.info(
-      "%cWebTransport polyfilled",
-      "color: white; background-color: green"
+      "%c%s",
+      "color: white; background-color: green",
+      "WebTransport polyfilled for " + this.#url
     );
 
     // readonly attribute Promise<WebTransportCloseInfo> closed;
@@ -61,8 +122,8 @@ export class WebTransportPolyfill {
       if (!this.#ws) {
         return reject(Error("WebTransport is closed"));
       }
-      this.#ws.addEventListener("close", (ce) => {
-        resolve(ce);
+      this.#ws.addEventListener("close", (closeEvent) => {
+        resolve(closeEvent);
       });
     });
 
@@ -75,10 +136,13 @@ export class WebTransportPolyfill {
       this.#ws.addEventListener("open", () => {
         resolve(null);
       });
-      this.#ws.addEventListener("error", (err) => {
-        console.log(err, "error");
-        this.#connErr = err;
-        reject(err);
+
+      this.#ws.addEventListener("error", (evt) => {
+        console.debug("#ws.addEventListener(error)", { evt });
+        console.debug("#ws.addEventListener(error)", evt.target);
+        // TODO: this `err` is a Event, not Error
+        // this.#connErr = err;
+        // reject(err);
       });
 
       this.datagrams = new Datagrams(this.#ws);
@@ -86,17 +150,11 @@ export class WebTransportPolyfill {
 
     // https://www.w3.org/TR/webtransport/#dom-webtransport-close
     this.close = (closeInfo?: WebTransportCloseInfo) => {
-      if (!this.#ws) {
-        return;
+      this.#reconnect = false;
+      console.debug("USR-close(), stop reconnect")
+      if (this.#ws && this.#ws.readyState <= WebSocket.OPEN) {
+        this.#ws.close(closeInfo?.closeCode, closeInfo?.reason);
       }
-      // in case of close code is not in range 3000-4999, set it to 4000
-      // ref: https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.2
-      if (closeInfo) {
-        if (closeInfo.closeCode < 3000 || closeInfo.closeCode > 4999) {
-          closeInfo.closeCode = 4000;
-        }
-      }
-      this.#ws.close(closeInfo?.closeCode, closeInfo?.reason);
     };
   }
 
@@ -108,7 +166,7 @@ export class WebTransportPolyfill {
     });
   }
 
-  // Promise<WebTransportUniidirectionalStream> createBidirectionalStream(optional WebTransportSendStreamOptions options = {});
+  // Promise<WebTransportUnidirectionalStream> createBidirectionalStream(optional WebTransportSendStreamOptions options = {});
   createUnidirectionalStream(): Promise<UnidirectionalStream> {
     return new Promise((resolve, reject) => {
       if (!this.#ws) return reject(Error("WebTransport is closed"));
@@ -117,10 +175,20 @@ export class WebTransportPolyfill {
   }
 }
 
-if (typeof window !== "undefined") {
-  if (typeof window.WebTransport === "undefined") {
-    window.WebTransport = WebTransportPolyfill;
+// if (typeof window !== "undefined") {
+//   if (typeof window.WebTransport === "undefined") {
+//     window.WebTransport = WebTransportPolyfill;
+//   }
+// }
+
+if (typeof globalThis !== "undefined") {
+  if (typeof globalThis.WebTransport === "undefined") {
+    Object.defineProperty(globalThis, "WebTransport", WebTransportPolyfill)
+  } else {
+    console.debug("[PL]: WebTransport is native supported")
   }
+} else {
+  console.debug("[PL]: globalThis is undefined")
 }
 
 export default WebTransportPolyfill;

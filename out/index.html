@@ -1,19 +1,25 @@
-<html>
+<!DOCTYPE html>
 
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <button id="btnClose">close connection</button>
+    </div>
     <script type="module">
-        import {WebTransportPolyfill} from './index.js'
+        import { WebTransportPolyfill } from './index.js'
+        // import { WebTransportPolyfill } from 'https://cdn.skypack.dev/ccwtpf'
+
         const url = `https://wsss.deno.dev/`;
-        const transport = new WebTransportPolyfill(url);
+
+        const transport = new WebTransportPolyfill(url, { reconnect: true });
 
         // Optionally, set up functions to respond to the connection closing:
         transport.closed
-            .then(() => {
-                console.log(`The HTTP/3 connection to ${url} closed gracefully.`);
+            .then(({ code, reason }) => {
+                console.log(`The HTTP/3 connection to ${url} closed gracefully. [code=${code}, reason=${reason}]`, url);
             })
-            .catch((error) => {
-                console.error(`The HTTP/3 connection to ${url} closed due to `, error);
+            .catch((e) => {
+                console.error(`The HTTP/3 connection to ${url} closed due to error.`, url);
+                console.log({ e });
             });
 
         // Once .ready fulfilled, the connection can be used
@@ -28,18 +34,27 @@
             writer.write(data2);
         }, 1e3);
 
-        setTimeout(() => {
+        // setTimeout(() => {
+        //     // close the connection
+        //     transport.close({
+        //         closeCode: 4888,
+        //         reason: "client close connection by setTimeout",
+        //     });
+        // }, 100);
+
+        document.getElementById('btnClose').addEventListener('click', () => {
             // close the connection
             transport.close({
-                closeCode: 3000,
-                reason: "close connection by setTimeout",
+                closeCode: 4888,
+                reason: "client close connection by click",
             });
-        }, 3e3);
+            console.log('triggered 4888 close')
+        });
 
         // Read datagrams from the server.
         const reader = transport.datagrams.readable.getReader();
         while (true) {
-            const {value, done} = await reader.read();
+            const { value, done } = await reader.read();
             if (done) {
                 break;
             }
