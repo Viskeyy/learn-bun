@@ -79,7 +79,6 @@ export class WebTransportPolyfill {
     ws.addEventListener("open", (e) => { console.debug(`[${this.#sid}] connected`) });
     // define reconnect handler
     const reconnectHandler = (closeEvent) => {
-      console.debug('--- reconnect Handler', closeEvent.code, closeEvent.reason, this.#ws?.sid)
       if (closeEvent.code < 2000) {
         // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4
         // 1006: is a reserved value and MUST NOT be set as a status code in a Close control frame by an endpoint. It is designated for use in applications expecting a status code to indicate that the connection was closed abnormally, e.g., without sending or receiving a Close control frame.
