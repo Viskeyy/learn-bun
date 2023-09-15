@@ -73,23 +73,24 @@ export class WebTransportPolyfill {
   #connect() {
     this.#ws = null;
     const ws = new WebSocket(this.#url);
-    this.#sid++
     Object.assign(ws, { sid: this.#sid })
     ws.binaryType = "arraybuffer";
     // onopen
-    ws.addEventListener("open", (e) => {
-      console.debug(`[${this.#sid}] XXXXXXXXXXX open`);
-    });
+    ws.addEventListener("open", (e) => { console.debug(`[${this.#sid}] connected`) });
     // define reconnect handler
     const reconnectHandler = (closeEvent) => {
-      console.debug(`[${this.#sid}]++++++++++onclose [code=${closeEvent.code}, reason=${closeEvent.reason}]`);
+      console.debug('--- reconnect Handler', closeEvent.code, closeEvent.reason, this.#ws?.sid)
       if (closeEvent.code < 2000) {
         // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4
         // 1006: is a reserved value and MUST NOT be set as a status code in a Close control frame by an endpoint. It is designated for use in applications expecting a status code to indicate that the connection was closed abnormally, e.g., without sending or receiving a Close control frame.
         ws.removeEventListener("close", reconnectHandler)
-        console.debug(`[${this.#sid}]>>reconnect=${this.#reconnect} [code=${closeEvent.code}, reason=${closeEvent.reason}]`);
         if (this.#reconnect) {
-          this.#connect();
+          // wait 1~4 seconds to reconnect
+          const rand = (Math.random() * 3 + 1) * 1000;
+          setTimeout(() => {
+            this.#sid++
+            this.#connect();
+          }, rand);
         }
       } else {
         console.debug(`[${this.#sid}]DO NOT reconnect because of error code`);
@@ -100,7 +101,6 @@ export class WebTransportPolyfill {
       ws.addEventListener("close", reconnectHandler)
     }
     this.#ws = ws;
-    console.log(`[${this.#sid}]CC-created a new WebSocket`)
     // remove `onclose` reconnect handler before page unload, this makes developers feels good when debugging their
     // web apps with F5/refresh page.
     globalThis.window.addEventListener('beforeunload', () => {
@@ -138,11 +138,11 @@ export class WebTransportPolyfill {
       });
 
       this.#ws.addEventListener("error", (evt) => {
-        console.debug("#ws.addEventListener(error)", { evt });
-        console.debug("#ws.addEventListener(error)", evt.target);
+        // console.debug("#ws.addEventListener(error)", { evt });
+        // console.debug("#ws.addEventListener(error)", evt.target);
         // TODO: this `err` is a Event, not Error
-        // this.#connErr = err;
-        // reject(err);
+        // this.#connErr = evt;
+        reject(evt);
       });
 
       this.datagrams = new Datagrams(this.#ws);

@@ -22,6 +22,16 @@
                 console.log({ e });
             });
 
+
+        document.getElementById('btnClose').addEventListener('click', () => {
+            // close the connection
+            transport.close({
+                closeCode: 4888,
+                reason: "client close connection by click",
+            });
+            console.log('triggered 4888 close')
+        });
+
         // Once .ready fulfilled, the connection can be used
         await transport.ready;
 
@@ -40,16 +50,7 @@
         //         closeCode: 4888,
         //         reason: "client close connection by setTimeout",
         //     });
-        // }, 100);
-
-        document.getElementById('btnClose').addEventListener('click', () => {
-            // close the connection
-            transport.close({
-                closeCode: 4888,
-                reason: "client close connection by click",
-            });
-            console.log('triggered 4888 close')
-        });
+        // }, 2e3);
 
         // Read datagrams from the server.
         const reader = transport.datagrams.readable.getReader();
