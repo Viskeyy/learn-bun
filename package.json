@@ -1,6 +1,6 @@
 {
-  "name": "ccwtpf",
-  "version": "0.0.1",
+  "name": "@yomo/webtransport-polyfill",
+  "version": "1.0.8",
   "description": "WebTransport implementation to fallback to WebSocket if browser does not support it",
   "keywords": [
     "webtransport",

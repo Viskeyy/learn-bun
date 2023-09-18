@@ -41,6 +41,9 @@ describe('test .ctor', () => {
           expect(url).toBe("wss://api.example.com/");
         }
         addEventListener() { }
+      },
+      window: {
+        addEventListener: () => { }
       }
     });
     new WebTransportPolyfill("https://api.example.com");
@@ -59,6 +62,10 @@ describe('test close()', () => {
           expect(b).toBeUndefined()
         }
         addEventListener() { }
+      },
+      console: {
+        debug: () => { },
+        info: () => { }
       }
     });
     const wt = new WebTransportPolyfill("https://api.example.com");
@@ -76,6 +83,10 @@ describe('test close()', () => {
           expect(b).toBe("test");
         }
         addEventListener() { }
+      },
+      console: {
+        debug: () => { },
+        info: () => { }
       }
     });
     const wt = new WebTransportPolyfill("https://api.example.com");
