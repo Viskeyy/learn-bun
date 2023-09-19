@@ -5,10 +5,19 @@ import { WebTransportPolyfill } from '../src/index';
 // suppress console.log and console.info
 beforeEach(() => {
   Object.assign(globalThis, {
-    console: {
-      log: () => { },
-      info: () => { }
-    }
+    window: {
+      addEventListener: () => { },
+      console: {
+        log: () => { },
+        info: () => { },
+        debug: () => { },
+      },
+      WebSocket: class WebSocket {
+        constructor() { }
+        addEventListener() { }
+        close() { }
+      },
+    },
   })
 });
 
@@ -23,91 +32,37 @@ describe('test .ctor', () => {
   test('should throw SyntaxError when url is not https', () => {
     // const err = new SyntaxError("Invalid protocol");
     expect(() => {
-      new WebTransportPolyfill("http://api.example.com")
+      new WebTransportPolyfill("wss://lo.yomo.dev:8443")
     }).toThrow(SyntaxError)
   });
 
   test('should throw SyntaxError when url has fragement', () => {
     // const err = new SyntaxError("Fragment is not permitted");
     expect(() => {
-      new WebTransportPolyfill("https://api.example.com/#abced")
+      new WebTransportPolyfill("https://lo.yomo.dev:8443/#abced")
     }).toThrow(SyntaxError)
   });
 
   test('should work', () => {
-    Object.assign(globalThis, {
-      WebSocket: class WebSocket {
-        constructor(url: string) {
-          expect(url).toBe("wss://api.example.com/");
-        }
-        addEventListener() { }
-      },
-      window: {
-        addEventListener: () => { }
-      }
-    });
-    new WebTransportPolyfill("https://api.example.com");
+    new WebTransportPolyfill("https://lo.yomo.dev:8443/v1");
   });
 })
 
 describe('test close()', () => {
   test('should close the connection', () => {
-    Object.assign(globalThis, {
-      WebSocket: class WebSocket {
-        constructor(url: string) {
-          expect(url).toBe("wss://api.example.com/");
-        }
-        close(a: number, b: string) {
-          expect(a).toBeUndefined()
-          expect(b).toBeUndefined()
-        }
-        addEventListener() { }
-      },
-      console: {
-        debug: () => { },
-        info: () => { }
-      }
-    });
-    const wt = new WebTransportPolyfill("https://api.example.com");
+    const wt = new WebTransportPolyfill("https://lo.yomo.dev:8443");
     wt.close();
   })
 
   test('should close the connection with code and reason', () => {
-    Object.assign(globalThis, {
-      WebSocket: class WebSocket {
-        constructor(url: string) {
-          expect(url).toBe("wss://api.example.com/");
-        }
-        close(a: number, b: string) {
-          expect(a).toBe(4321);
-          expect(b).toBe("test");
-        }
-        addEventListener() { }
-      },
-      console: {
-        debug: () => { },
-        info: () => { }
-      }
-    });
-    const wt = new WebTransportPolyfill("https://api.example.com");
+    const wt = new WebTransportPolyfill("https://lo.yomo.dev:8443");
     wt.close({ closeCode: 4321, reason: "test" });
   });
 })
 
 describe('test server initiated stream', () => {
-  beforeEach(() => {
-    Object.assign(globalThis, {
-      WebSocket: class WebSocket {
-        constructor(url: string) {
-          console.log("> connect to:", url)
-        }
-        addEventListener() { }
-      }
-    });
-  })
-
   test('incomingBidirectionalStreams', async () => {
-    const wt = new WebTransportPolyfill("https://api.example.com");
+    const wt = new WebTransportPolyfill("https://lo.yomo.dev:8443");
     const rs = wt.incomingBidirectionalStreams;
     const err = new Error("websocket do not support server initiated stream")
     // assert.throws(() => { rs.getReader() }, err)
@@ -117,7 +72,7 @@ describe('test server initiated stream', () => {
   })
 
   test('incomingUniidirectionalStreams', async () => {
-    const wt = new WebTransportPolyfill("https://api.example.com");
+    const wt = new WebTransportPolyfill("https://lo.yomo.dev:8443");
     const rs = wt.incomingUnidirectionalStreams;
     const err = new Error("websocket do not support server initiated stream")
     // assert.throws(() => { rs.getReader() }, err)

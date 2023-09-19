@@ -174,20 +174,13 @@ export class WebTransportPolyfill {
   }
 }
 
-// if (typeof window !== "undefined") {
-//   if (typeof window.WebTransport === "undefined") {
-//     window.WebTransport = WebTransportPolyfill;
-//   }
-// }
-
-if (typeof globalThis !== "undefined") {
-  if (typeof globalThis.WebTransport === "undefined") {
-    Object.defineProperty(globalThis, "WebTransport", WebTransportPolyfill)
+if (typeof window !== "undefined") {
+  if (typeof window.WebTransport === "undefined") {
+    window.WebTransport = WebTransportPolyfill;
+    console.log("[webtransport-polyfill]: WebTransport is polyfilled")
   } else {
-    console.debug("[PL]: WebTransport is native supported")
+    console.debug("[webtransport-polyfill]: WebTransport is native supported")
   }
-} else {
-  console.debug("[PL]: globalThis is undefined")
 }
 
 export default WebTransportPolyfill;
