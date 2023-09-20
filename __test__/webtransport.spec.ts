@@ -1,8 +1,6 @@
 // a unit test for WebTransportPolyfill
 import { describe, expect, test, beforeEach } from 'bun:test';
-import * as WebTransport from '../src/index';
-
-console.log(WebTransport);
+import '../src/index';
 
 // suppress console.log and console.info
 beforeEach(() => {});
